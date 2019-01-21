@@ -1,0 +1,37 @@
+{
+	"fitness": [{
+			"eventType": "PLAYER_POINT_EARNED"
+		}, {
+			"eventType": "ENEMY_POINT_EARNED"
+		}, {
+			"eventType": "X_BALL_DISTANCE"
+		}, {
+			"eventType": "Y_BALL_DISTANCE"
+		}
+	],
+	"inputNeurons": [{
+			"$TYPE": "BallPositionX"
+		}, {
+			"$TYPE": "BallPositionY"
+		}, {
+			"$TYPE": "BallVelocityX"
+		}, {
+			"$TYPE": "BallVelocityX"
+		}, {
+			"$TYPE": "PlayerPositionY"
+		}
+	],
+	"outputNeurons": [{
+			"$TYPE": "MoveUp"
+		}, {
+			"$TYPE": "StandStill"
+		}, {
+			"$TYPE": "MoveDown"
+		}
+	],
+	"biology": [
+	],
+	"enum": {},
+	"templates": {}
+
+}
