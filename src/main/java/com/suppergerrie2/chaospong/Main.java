@@ -32,17 +32,8 @@ public class Main extends Canvas implements Runnable, KeyListener {
 
     ChaosNetClient client = new ChaosNetClient();
 
-    /**
-     * Arguments can be:
-     * game=one of following values xor, flappy_bird, flappybird and pong (default=pong)
-     * width=positive integer values (default=800)
-     * height=positive integer values (default=800)
-     * ai with=one of following values pool, ga, geneticalgorithm, nn, neuralnetwork (default=nn)
-     * ai_type=same as ai
-     * layers=an list of numbers in the following format: a,b,c (Numbers with a , as divider)
-     *
-     * @param args The programs arguments as described above
-     */
+    PongOrganism bestTested = null;
+
     public static void main(String[] args) throws IOException {
 
         //Create the frame and the main instance
@@ -136,6 +127,7 @@ public class Main extends Canvas implements Runnable, KeyListener {
     //Makes the updates not wait but run whenever possible
     private boolean superSpeed = false;
 
+    boolean showBest = false;
 
     Pong pong = null;
 
@@ -199,35 +191,60 @@ public class Main extends Canvas implements Runnable, KeyListener {
      */
     private void update() {
 
-        if (pong == null || pong.getTotalPlayCount() > 25) {
-            if(pong!=null) {
-                testedOrganisms.add(pong.organism);
+        if (!showBest || bestTested == null) {
+
+            if (pong != null && pong.organism == bestTested) {
+                pong = null;
             }
 
-            if (organisms.size() == 0) {
-                Organism[] organisms;
-                if(testedOrganisms.size()>0) {
-                    System.out.println(testedOrganisms.size());
-                    organisms = client.getOrganisms(session, testedOrganisms.toArray(new Organism[0]));
-                    testedOrganisms.clear();
-                } else {
-                   organisms = client.getOrganisms(session);
+            if (pong == null || pong.getTotalPlayCount() > 25) {
+                System.out.println(organisms.size());
+                if (pong != null) {
+                    testedOrganisms.add(pong.organism);
+                    if (bestTested == null || pong.organism.getScore() > bestTested.getScore()) {
+                        bestTested = pong.organism;
+                    }
                 }
 
-                System.out.println(organisms.length);
+                if (organisms.size() == 0) {
+                    Organism[] organisms;
+                    if (testedOrganisms.size() > 0) {
+                        System.out.println(testedOrganisms.size());
+                        organisms = client.getOrganisms(session, testedOrganisms.toArray(new Organism[0]));
+                        testedOrganisms.clear();
+                    } else {
+                        organisms = client.getOrganisms(session);
+                    }
 
-                this.organisms.addAll(Arrays.asList(organisms));
+                    System.out.println(organisms.length);
+
+                    this.organisms.addAll(Arrays.asList(organisms));
+                }
+
+                Organism organism = organisms.poll();
+
+                if (organism != null) {
+                    System.out.println(organism.getNamespace());
+                    pong = new Pong((PongOrganism) organism, width, height);
+                    ((PongOrganism) organism).pongInstance = pong;
+                }
+            } else {
+                pong.update();
             }
 
-            Organism organism = organisms.poll();
-
-            if (organism != null) {
-                System.out.println(organism.getNamespace());
-                 pong = new Pong((PongOrganism)organism, width, height);
-                ((PongOrganism)organism).pongInstance = pong;
-            }
         } else {
+
+            if (pong.organism != bestTested) {
+                organisms.add(pong.organism);
+                pong.organism.increaseScore(-pong.organism.getScore());
+
+                pong = new Pong(bestTested, width, height);
+                bestTested.pongInstance = pong;
+                System.out.println(bestTested.getNamespace());
+            }
+
             pong.update();
+
         }
     }
 
@@ -255,6 +272,7 @@ public class Main extends Canvas implements Runnable, KeyListener {
         g.setFont(new Font("Arial", Font.PLAIN, 20));
         g.drawString("FPS: " + fps, 0, height);
         g.drawString("UPS: " + ups, 0, height - 20);
+        if(showBest) g.drawString("BEST MODE", 0, height-40);
 
         g.dispose();
         bs.show();
@@ -273,6 +291,8 @@ public class Main extends Canvas implements Runnable, KeyListener {
         //ctrl+shif+s will toggle superSpeed
         if (e.isControlDown() && e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_S) {
             superSpeed = !superSpeed;
+        } else if (e.getKeyCode() == KeyEvent.VK_B) {
+            showBest = !showBest;
         }
     }
 }
