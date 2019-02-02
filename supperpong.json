@@ -7,6 +7,8 @@
 			"eventType": "X_BALL_DISTANCE"
 		}, {
 			"eventType": "Y_BALL_DISTANCE"
+		}, {
+			"eventType": "PLAYER_HIT_BALL"
 		}
 	],
 	"inputNeurons": [{
