@@ -1,9 +1,11 @@
 package com.suppergerrie2.chaospong;
 
 import com.suppergerrie2.ChaosNetClient.ChaosNetClient;
+import com.suppergerrie2.ChaosNetClient.Constants;
 import com.suppergerrie2.ChaosNetClient.components.Organism;
 import com.suppergerrie2.ChaosNetClient.components.Session;
 import com.suppergerrie2.ChaosNetClient.components.TrainingRoom;
+import com.suppergerrie2.ChaosNetClient.components.nnet.neurons.HiddenNeuron;
 import com.suppergerrie2.ChaosNetClient.components.nnet.neurons.OutputNeuron;
 import com.suppergerrie2.chaospong.chaosnet.PongInputNeuron;
 import com.suppergerrie2.chaospong.chaosnet.PongOrganism;
@@ -16,8 +18,11 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferStrategy;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class Main extends Canvas implements Runnable, KeyListener {
 
@@ -80,6 +85,8 @@ public class Main extends Canvas implements Runnable, KeyListener {
         client.registerNeuronType("BallVelocityY", new PongInputNeuron(PongInputNeuron.Type.BALL_VEL_Y));
         client.registerNeuronType("PlayerPositionY", new PongInputNeuron(PongInputNeuron.Type.PLAYER_Y));
 
+        client.registerNeuronType("MiddleNeuron", new HiddenNeuron());
+
         client.registerNeuronType("MoveUp", new OutputNeuron());
         client.registerNeuronType("StandStill", new OutputNeuron());
         client.registerNeuronType("MoveDown", new OutputNeuron());
@@ -131,12 +138,14 @@ public class Main extends Canvas implements Runnable, KeyListener {
 
     Pong pong = null;
 
+    int targetUPS = 240;
+
     @Override
     public void run() {
         //lastTime we did the while loop
         long lastTime = System.nanoTime();
         //How long 1 update should take
-        double updateTime = 1000000000.0 / 60;
+        double updateTime = 1000000000.0 / targetUPS;
         //When this is 1 we need another update, if this is 0.5 we need to wait 0.5*updateTime
         double delta = 0;
 
@@ -148,6 +157,8 @@ public class Main extends Canvas implements Runnable, KeyListener {
         int fpsCounter = 0;
 
         while (running) {
+            updateTime = 1000000000.0 / targetUPS;
+
             long now = System.nanoTime();
 
             //Reset delta to 20 if it gets to big, makes sure we dont forget to render if the update is too slow
@@ -198,7 +209,6 @@ public class Main extends Canvas implements Runnable, KeyListener {
             }
 
             if (pong == null || pong.getTotalPlayCount() > 25) {
-                System.out.println(organisms.size());
                 if (pong != null) {
                     testedOrganisms.add(pong.organism);
                     if (bestTested == null || pong.organism.getScore() > bestTested.getScore()) {
@@ -208,15 +218,41 @@ public class Main extends Canvas implements Runnable, KeyListener {
 
                 if (organisms.size() == 0) {
                     Organism[] organisms;
-                    if (testedOrganisms.size() > 0) {
-                        System.out.println(testedOrganisms.size());
-                        organisms = client.getOrganisms(session, testedOrganisms.toArray(new Organism[0]));
-                        testedOrganisms.clear();
-                    } else {
-                        organisms = client.getOrganisms(session);
-                    }
+                    int attempts = 0;
 
-                    System.out.println(organisms.length);
+                    System.out.println(System.currentTimeMillis()/1000);
+                    do {
+                        if (testedOrganisms.size() > 0) {
+                            System.out.println(testedOrganisms.size());
+                            organisms = client.getOrganisms(session, testedOrganisms.toArray(new Organism[0]));
+                            testedOrganisms.clear();
+                        } else {
+                            organisms = client.getOrganisms(session);
+                        }
+
+                        if (organisms.length == 0) {
+
+
+                            URL url = null;
+                            try {
+                                url = new URL(Constants.HOST + "/v0/" + session.getTrainingRoom().ownerName + "/trainingrooms/" + session.getTrainingRoom().namespace + "/tranks/" + "genus-suppertest2" + "/children");
+
+                                System.out.println(client.doGetRequest(url, true).toString());
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+
+                            try {
+                                TimeUnit.SECONDS.sleep(Math.min(30, attempts));
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                        attempts++;
+                    } while (organisms.length == 0 && attempts < 30);
+
+                    System.out.println("Got " + organisms.length);
 
                     this.organisms.addAll(Arrays.asList(organisms));
                 }
@@ -224,7 +260,6 @@ public class Main extends Canvas implements Runnable, KeyListener {
                 Organism organism = organisms.poll();
 
                 if (organism != null) {
-                    System.out.println(organism.getNamespace());
                     pong = new Pong((PongOrganism) organism, width, height);
                     ((PongOrganism) organism).pongInstance = pong;
                 }
@@ -240,7 +275,6 @@ public class Main extends Canvas implements Runnable, KeyListener {
 
                 pong = new Pong(bestTested, width, height);
                 bestTested.pongInstance = pong;
-                System.out.println(bestTested.getNamespace());
             }
 
             pong.update();
@@ -272,7 +306,7 @@ public class Main extends Canvas implements Runnable, KeyListener {
         g.setFont(new Font("Arial", Font.PLAIN, 20));
         g.drawString("FPS: " + fps, 0, height);
         g.drawString("UPS: " + ups, 0, height - 20);
-        if(showBest) g.drawString("BEST MODE", 0, height-40);
+        if (showBest) g.drawString("BEST MODE", 0, height - 40);
 
         g.dispose();
         bs.show();

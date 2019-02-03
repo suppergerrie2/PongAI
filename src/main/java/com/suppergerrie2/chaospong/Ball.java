@@ -13,6 +13,8 @@ public class Ball {
     private float yVell = 5;
     private final Random random = new Random();
 
+    boolean collisionLastTick = false;
+
     public Ball(Pong instance) {
         this.instance = instance;
         reset();
@@ -35,6 +37,8 @@ public class Ball {
             return;
         }
 
+        boolean collided = false;
+
         if(instance.player.ballCollides(this)) {
             this.xVell = Math.abs(this.xVell);
             this.yVell = 5 + instance.player.yVell/5f;
@@ -42,11 +46,21 @@ public class Ball {
 
             this.xVell+=0.5;
             this.yVell+=0.5;
+
+            collided = true;
+
+            if(!collisionLastTick) {
+                instance.organism.increaseScore(Main.session.getTrainingRoom().getScoreEffect("PLAYER_HIT_BALL"));
+            }
         } else if (instance.enemy.ballCollides(this)) {
             this.xVell = -Math.abs(this.xVell);
             this.yVell = 5 + instance.enemy.yVell/5f;
             if(instance.enemy.yVell!=0)  this.yVell *= Math.signum(instance.enemy.yVell);
+
+            collided = true;
         }
+
+        collisionLastTick = collided;
 
         this.x += xVell;
         this.y += yVell;

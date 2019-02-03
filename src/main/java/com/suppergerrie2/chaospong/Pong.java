@@ -80,7 +80,7 @@ public class Pong {
         g.drawLine((int) ball.getX(), (int) ball.getY(), (int) (ball.getX() + ball.getXVell() * 200), (int) (ball.getY() + ball.getYVell() * 200));
 
         Utils.drawHorizontallyCenteredString(player.points + " - " + enemy.points, width, 30, g);
-        Utils.drawHorizontallyCenteredString(organism.getName(), width, 50, g);
+        Utils.drawHorizontallyCenteredString(organism.getName() + ", gen: " + organism.getGeneration(), width, 50, g);
 
         g.drawString("Score: " + organism.getScore(), 10, 40);
         TrainingRoom room = Main.session.getTrainingRoom();
